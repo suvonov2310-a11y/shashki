@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sherzod Shashka</title>
+    <style>
+        /* CSS - Tashqi ko'rinish */
+        body { 
+            background: #001f3f; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            font-family: sans-serif; 
+            margin: 0;
+            padding: 20px;
+        }
+        #board { 
+            display: grid; 
+            grid-template-columns: repeat(8, 45px); 
+            grid-template-rows: repeat(8, 45px); 
+            border: 5px solid #00d4ff; 
+            box-shadow: 0 0 20px #00d4ff;
+        }
+        .cell { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+        .black { background: #4d2600; }
+        .white { background: #ffcc99; }
+        .piece { 
+            width: 35px; height: 35px; border-radius: 50%; 
+            cursor: pointer; border: 2px solid #fff; position: relative; 
+        }
+        .red { background: #d32f2f; }
+        .light { background: #f5f5f5; border: 2px solid #333; }
+        .king::after { content: "👑"; position: absolute; left: 5px; top: 1px; font-size: 18px; }
+        .selected { outline: 4px solid #00d4ff; }
+        .status { margin: 15px; font-size: 20px; color: #00d4ff; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>SSH SHASHKA 2026</h1>
+    <div class="status" id="status">Navbat: Qizillar</div>
+    <div id="board"></div>
+
+    <script>
+        // JAVASCRIPT - O'yin mantig'i
+        const board = document.getElementById('board');
+        const status = document.getElementById('status');
+        let turn = 'red';
+        let selectedPiece = null;
+        let gameState = Array(8).fill().map(() => Array(8).fill(null));
+
+        function initGame() {
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if ((r + c) % 2 !== 0) {
+                        if (r < 3) gameState[r][c] = { color: 'light', king: false };
+                        if (r > 4) gameState[r][c] = { color: 'red', king: false };
+                    }
+                }
+            }
+            renderBoard();
+        }
+
+        function getPossibleMoves(r, c, p) {
+            let moves = [];
+            const jumpDirs = [[2,2], [2,-2], [-2,2], [-2,-2]];
+            const normDirs = p.king ? [[1,1], [1,-1], [-1,1], [-1,-1]] : 
+                             (p.color === 'red' ? [[-1,1], [-1,-1]] : [[1,1], [1,-1]]);
+
+            jumpDirs.forEach(d => {
+                const nr = r + d[0], nc = c + d[1];
+                const mr = r + d[0]/2, mc = c + d[1]/2;
+                if (nr>=0 && nr<8 && nc>=0 && nc<8 && !gameState[nr][nc]) {
+                    const mid = gameState[mr][mc];
+                    if (mid && mid.color !== p.color) moves.push({r: nr, c: nc, jump: true, midR: mr, midC: mc});
+                }
+            });
+
+            normDirs.forEach(d => {
+                const nr = r + d[0], nc = c + d[1];
+                if (nr>=0 && nr<8 && nc>=0 && nc<8 && !gameState[nr][nc]) moves.push({r: nr, c: nc, jump: false});
+            });
+            return moves;
+        }
+
+        function handleCellClick(r, c) {
+            const p = gameState[r][c];
+            if (p && p.color === turn) {
+                selectedPiece = {r, c, p};
+                renderBoard();
+            } else if (selectedPiece) {
+                const moves = getPossibleMoves(selectedPiece.r, selectedPiece.c, selectedPiece.p);
+                const move = moves.find(m => m.r === r && m.c === c);
+                if (move) {
+                    if (move.jump) gameState[move.midR][move.midC] = null;
+                    gameState[r][c] = selectedPiece.p;
+                    gameState[selectedPiece.r][selectedPiece.c] = null;
+                    if ((turn === 'red' && r === 0) || (turn === 'light' && r === 7)) gameState[r][c].king = true;
+                    selectedPiece = null;
+                    turn = turn === 'red' ? 'light' : 'red';
+                    status.innerText = `Navbat: ${turn === 'red' ? 'Qizillar' : 'Oqlar'}`;
+                }
+                renderBoard();
+            }
+        }
+
+        function renderBoard() {
+            board.innerHTML = '';
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${(r + c) % 2 !== 0 ? 'black' : 'white'}`;
+                    cell.onclick = () => handleCellClick(r, c);
+                    const p = gameState[r][c];
+                    if (p) {
+                        const piece = document.createElement('div');
+                        piece.className = `piece ${p.color} ${p.king ? 'king' : ''} ${selectedPiece && selectedPiece.r==r && selectedPiece.c==c ? 'selected' : ''}`;
+                        cell.appendChild(piece);
+                    }
+                    board.appendChild(cell);
+                }
+            }
+        }
+        initGame();
+    </script>
+</body>
+</html>
